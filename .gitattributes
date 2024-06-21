@@ -1,12 +1,15 @@
 # Set default behavior to automatically normalize line endings.
 * text=auto
 
-# Declare files that will always have LF line endings on checkout.
+# Handle specific files with LF line endings.
 *.sh text eol=lf
 *.csh text eol=lf
 *.fish text eol=lf
 *.py text eol=lf
+*.bin binary
 
-# Binary files should be left untouched.
+# Ensure binary files are not converted.
 *.jpg binary
 *.png binary
+*.exe binary
+*.dll binary
