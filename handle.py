@@ -1,6 +1,8 @@
 import pyautogui
 import time
 import sys
+import subprocess
+import os
 
 def execute_commands_from_file(filename):
     with open(filename, 'r') as file:
@@ -29,6 +31,13 @@ def execute_baritone_command(command):
 
 def main():
     print("Process started, 10 second timer to wait for setup\n")
+    print("Starting chat bridge...\n")
+    try:
+        script_path = os.path.abspath('mc-chat-bridge.py')
+        subprocess.Popen(['cmd.exe', '/c', f'start cmd.exe /K python3 {script_path}'])
+    except Exception as e:
+        print(f"Exception occurred while running new_script.py: {e}")
+
     time.sleep(10)
     if len(sys.argv) < 2:
         print("Usage: python script.py <file1> <file2> ...")
