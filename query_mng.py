@@ -1,7 +1,9 @@
-# query_mng.py
+import re
 import sqlite3
 import os
 from openai import OpenAI
+from typing_extensions import override
+from openai import AssistantEventHandler
 
 DATABASE = 'memory.db'
 STOP_WORDS = {
@@ -73,23 +75,75 @@ def chat_with_gpt(query, context):
         return
 
     client = OpenAI(api_key=api_key)
-    model = "ft:gpt-3.5-turbo-1106:personal::9NZDkpmR"
-    params = f'You are Dot, an assistant for Dillon, you are smart, wise and simple. you have multiple interfaces including minecraft, robot, chatbot, etc. You will be provided context with every query, some of it may be relevant some not, use as needed Context: {context_str}'
-    messages = [
-        {"role": "system", "content": params},
-        {"role": "user", "content": query},
-    ]
 
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=0
-        )
+    # Replace with your existing assistant's ID
+    assistant_id = 'asst_iIp9Nr1q3U4UaXeGXmfZkEhR'  # Replace this with your assistant's ID
 
-        response_message = response.choices[0].message.content
-        print(response_message)
-        return response_message
-    except Exception as e:
-        print(f"Error calling OpenAI API: {e}")
-        return None
+    # Create a Thread
+    thread = client.beta.threads.create()
+
+    # Add a Message to the Thread
+    message = client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=query
+    )
+
+    # Variable to store the response
+    response_text = []
+
+    # EventHandler for streaming response
+    class EventHandler(AssistantEventHandler):    
+        @override
+        def on_text_created(self, text) -> None:
+            response_text.append(str(text))
+      
+        @override
+        def on_text_delta(self, delta, snapshot):
+            response_text.append(str(delta.value))
+      
+        def on_tool_call_created(self, tool_call):
+            response_text.append(f"\nassistant > {tool_call.type}\n")
+  
+        def on_tool_call_delta(self, delta, snapshot):
+            if delta.type == 'code_interpreter':
+                if delta.code_interpreter.input:
+                    response_text.append(str(delta.code_interpreter.input))
+                if delta.code_interpreter.outputs:
+                    response_text.append(f"\n\noutput >")
+                    for output in delta.code_interpreter.outputs:
+                        if output.type == "logs":
+                            response_text.append(str(output.logs))
+
+    # Stream the response
+    with client.beta.threads.runs.stream(
+        thread_id=thread.id,
+        assistant_id=assistant_id,
+        event_handler=EventHandler(),
+    ) as stream:
+        stream.until_done()
+    
+    # Join and clean up the collected response
+    raw_response = ''.join(response_text)
+    
+    # Clean up metadata
+    clean_response = re.sub(r'Text\(.*?\)', '', raw_response)  # Remove 'Text(...)'
+    clean_response = re.sub(r'\[.*?\]', '', clean_response)  # Remove square-bracketed references
+    clean_response = re.sub(r'\nassistant >.*?\n', '', clean_response)  # Remove assistant tool calls
+    
+    return clean_response.strip()
+def main():
+    initialize_db()
+    
+    while True:
+
+   
+        query = input("Enter your query: ")
+        context = process_query(query)
+        response = chat_with_gpt(query, context)
+        if response:
+            print(f"Output from query_mng: {response}")
+
+
+if __name__ == "__main__":
+    main()
