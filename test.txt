@@ -1,3 +1,1 @@
-#mine minecraft:coal_ore
-wait 2000
-#goto -430 65 1193
+#follow player dot______

@@ -15,3 +15,11 @@ scp hippoAdmin@192.168.6.84:/home/hippo/hippo_code/output.wav .
 1892
 
 grep MemTotal /proc/meminfo.
+
+
+
+# TODO
+set up open AI key export
+launch venv
+install baritone 
+launch game
